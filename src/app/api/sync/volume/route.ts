@@ -1,6 +1,5 @@
 import type { VolumeJobRow, VolumeResponseItem } from '@/app/api/sync/volume/helpers'
 import { and, asc, eq, lte } from 'drizzle-orm'
-import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
 import {
   buildVolumeJobRetryAt,
@@ -12,7 +11,6 @@ import {
   VOLUME_SYNC_JOB_TYPE,
 } from '@/app/api/sync/volume/helpers'
 import { isCronAuthorized } from '@/lib/auth-cron'
-import { cacheTags } from '@/lib/cache-tags'
 import { events, jobs, markets, outcomes } from '@/lib/db/schema'
 import { db } from '@/lib/drizzle'
 
@@ -147,9 +145,6 @@ export async function GET(request: Request) {
     }
 
     stats.updatedEventSlugs = Array.from(updatedEventSlugs)
-    if (stats.updated > 0) {
-      revalidateVolumeCaches(stats.updatedEventSlugs)
-    }
 
     return NextResponse.json({ success: true, ...stats })
   }
@@ -430,13 +425,5 @@ function safeParseVolumeJobPayload(job: VolumeJobRow) {
   }
   catch {
     return null
-  }
-}
-
-function revalidateVolumeCaches(eventSlugs: string[]) {
-  revalidateTag(cacheTags.eventsList, 'max')
-
-  for (const slug of eventSlugs) {
-    revalidateTag(cacheTags.event(slug), 'max')
   }
 }
